@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 주식 분석 시스템</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 min-h-screen p-6">
+    <div class="max-w-7xl mx-auto">
+        <div class="mb-8 flex justify-between items-center">
+            <div>
+                <h1 class="text-4xl font-bold text-white mb-2">AI 주식 분석 시스템</h1>
+                <p class="text-slate-400" id="subtitle">API 키를 입력하여 시작하세요</p>
+            </div>
+            <div class="flex gap-3">
+                <button id="settingsBtn" class="bg-slate-700 text-white px-4 py-2 rounded-lg hover:bg-slate-600 transition-all flex items-center gap-2">
+                    ⚙️ 설정
+                </button>
+                <button id="refreshBtn" class="bg-slate-700 text-white px-4 py-2 rounded-lg hover:bg-slate-600 transition-all hidden">
+                    🔄 새로고침
+                </button>
+            </div>
+        </div>
+
+        <div id="settingsPanel" class="bg-slate-800 rounded-xl p-6 mb-6 shadow-xl border-2 border-blue-500">
+            <h2 class="text-2xl font-bold text-white mb-4">API 설정</h2>
+            
+            <div class="bg-blue-900/30 border border-blue-700/50 rounded-lg p-4 mb-4">
+                <h3 class="text-blue-200 font-semibold mb-2">📌 Alpha Vantage API 키 받는 방법</h3>
+                <ol class="text-sm text-blue-200 space-y-2 list-decimal list-inside">
+                    <li><a href="https://www.alphavantage.co/support/#api-key" target="_blank" class="underline hover:text-blue-300">여기를 클릭</a>하여 Alpha Vantage 사이트로 이동</li>
+                    <li>이메일 주소를 입력하고 무료 API 키 받기</li>
+                    <li>받은 API 키를 아래에 입력</li>
+                </ol>
+            </div>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-slate-300 mb-2 font-semibold">Alpha Vantage API 키</label>
+                    <input 
+                        type="text" 
+                        id="apiKeyInput"
+                        placeholder="예: ABCD1234EFGH5678IJKL"
+                        class="w-full px-4 py-3 bg-slate-700 text-white rounded-lg border border-slate-600 focus:border-blue-500 focus:outline-none"
+                    />
+                </div>
+                <button id="submitBtn" class="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 transition-all">
+                    시작하기
+                </button>
+            </div>
+
+            <div class="mt-4 bg-yellow-900/30 border border-yellow-700/50 rounded-lg p-3">
+                <p class="text-sm text-yellow-200">⚠️ 무료 플랜 제한: 분당 5회, 일일 100회 요청</p>
+            </div>
+        </div>
+
+        <div id="errorBox" class="bg-red-900/30 border border-red-700/50 rounded-lg p-4 mb-6 items-center gap-2 hidden">
+            <span class="text-red-200" id="errorText"></span>
+        </div>
+
+        <div class="grid grid-cols-5 gap-4 mb-6">
+            <button data-stock="AAPL" class="stock-btn p-4 rounded-lg transition-all bg-blue-600 text-white shadow-lg">
+                <div class="font-bold text-lg">AAPL</div>
+                <div class="text-xs opacity-80">Apple Inc.</div>
+            </button>
+            <button data-stock="GOOGL" class="stock-btn p-4 rounded-lg transition-all bg-slate-800 text-slate-300 hover:bg-slate-700">
+                <div class="font-bold text-lg">GOOGL</div>
+                <div class="text-xs opacity-80">Alphabet Inc.</div>
+            </button>
+            <button data-stock="MSFT" class="stock-btn p-4 rounded-lg transition-all bg-slate-800 text-slate-300 hover:bg-slate-700">
+                <div class="font-bold text-lg">MSFT</div>
+                <div class="text-xs opacity-80">Microsoft Corp.</div>
+            </button>
+            <button data-stock="TSLA" class="stock-btn p-4 rounded-lg transition-all bg-slate-800 text-slate-300 hover:bg-slate-700">
+                <div class="font-bold text-lg">TSLA</div>
+                <div class="text-xs opacity-80">Tesla Inc.</div>
+            </button>
+            <button data-stock="AMZN" class="stock-btn p-4 rounded-lg transition-all bg-slate-800 text-slate-300 hover:bg-slate-700">
+                <div class="font-bold text-lg">AMZN</div>
+                <div class="text-xs opacity-80">Amazon.com Inc.</div>
+            </button>
+        </div>
+
+        <div id="priceBox" class="bg-slate-800 rounded-xl p-6 mb-6 shadow-xl hidden">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-3xl font-bold text-white mb-2" id="currentPrice">$0.00</h2>
+                    <div class="flex items-center gap-2">
+                        <span id="priceChange" class="text-lg font-semibold"></span>
+                    </div>
+                    <div class="mt-2 text-sm text-slate-400" id="priceDetails"></div>
+                </div>
+                <button id="analyzeBtn" class="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 transition-all">
+                    🤖 무료 AI 분석
+                </button>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-3 gap-6">
+            <div class="col-span-2 bg-slate-800 rounded-xl p-6 shadow-xl">
+                <h3 class="text-xl font-bold text-white mb-4">📊 가격 차트 (최근 30일)</h3>
+                <div style="position: relative; height: 350px; background: #1e293b; border-radius: 8px; padding: 10px;">
+                    <canvas id="priceChart" style="width: 100%; height: 100%;"></canvas>
+                </div>
+            </div>
+
+            <div class="bg-slate-800 rounded-xl p-6 shadow-xl">
+                <h3 class="text-xl font-bold text-white mb-4">💡 무료 AI 분석</h3>
+                <div id="analysisBox" class="text-center text-slate-400 py-12">
+                    AI 분석 버튼을 클릭하여<br>무료 분석을 시작하세요
+                </div>
+            </div>
+        </div>
+
+
+        </div>
+    </div>
+
+    <script>
+        let apiKey = '';
+        let selectedStock = 'AAPL';
+        let autoRefreshInterval = null;
+
+        document.getElementById('settingsBtn').addEventListener('click', function() {
+            document.getElementById('settingsPanel').classList.toggle('hidden');
+        });
+
+        document.getElementById('submitBtn').addEventListener('click', function() {
+            const input = document.getElementById('apiKeyInput');
+            apiKey = input.value.trim();
+            
+            if (!apiKey) {
+                showError('API 키를 입력해주세요');
+                return;
+            }
+
+            document.getElementById('settingsPanel').classList.add('hidden');
+            document.getElementById('refreshBtn').classList.remove('hidden');
+            document.getElementById('subtitle').textContent = '실시간 Alpha Vantage 데이터 • 30초 자동 갱신';
+            
+            fetchRealTimeData();
+            
+            if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+            autoRefreshInterval = setInterval(fetchRealTimeData, 30000);
+        });
+
+        document.getElementById('refreshBtn').addEventListener('click', function() {
+            fetchRealTimeData();
+        });
+
+        document.getElementById('analyzeBtn').addEventListener('click', function() {
+            analyzeStock();
+        });
+
+        document.querySelectorAll('.stock-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                selectedStock = this.getAttribute('data-stock');
+                
+                document.querySelectorAll('.stock-btn').forEach(function(b) {
+                    if (b.getAttribute('data-stock') === selectedStock) {
+                        b.className = 'stock-btn p-4 rounded-lg transition-all bg-blue-600 text-white shadow-lg';
+                    } else {
+                        b.className = 'stock-btn p-4 rounded-lg transition-all bg-slate-800 text-slate-300 hover:bg-slate-700';
+                    }
+                });
+
+                if (apiKey) {
+                    fetchRealTimeData();
+                }
+            });
+        });
+
+        async function fetchRealTimeData() {
+            if (!apiKey) {
+                showError('API 키를 먼저 입력해주세요');
+                return;
+            }
+
+            try {
+                hideError();
+
+                const quoteRes = await fetch(
+                    'https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=' + selectedStock + '&apikey=' + apiKey
+                );
+                const quoteData = await quoteRes.json();
+
+                if (quoteData['Note']) {
+                    showError('⚠️ API 요청 한도 초과 - 1분 후 다시 시도해주세요');
+                    return;
+                }
+
+                if (quoteData['Error Message']) {
+                    showError('❌ 잘못된 API 키이거나 종목 심볼입니다');
+                    return;
+                }
+
+                const quote = quoteData['Global Quote'];
+                if (quote && quote['05. price']) {
+                    updatePriceDisplay(quote);
+                }
+
+                const dailyRes = await fetch(
+                    'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=' + selectedStock + '&apikey=' + apiKey
+                );
+                const dailyData = await dailyRes.json();
+
+                if (dailyData['Time Series (Daily)']) {
+                    drawChart(dailyData['Time Series (Daily)']);
+                }
+            } catch (err) {
+                showError('데이터를 가져오는 중 오류 발생: ' + err.message);
+            }
+        }
+
+        function updatePriceDisplay(quote) {
+            const price = parseFloat(quote['05. price']);
+            const change = parseFloat(quote['09. change']);
+            const changePercent = parseFloat(quote['10. change percent'].replace('%', ''));
+            const high = parseFloat(quote['03. high']);
+            const low = parseFloat(quote['04. low']);
+            const volume = parseInt(quote['06. volume']);
+
+            document.getElementById('priceBox').classList.remove('hidden');
+            document.getElementById('currentPrice').textContent = '$' + price.toFixed(2);
+            
+            const changeColor = change >= 0 ? 'text-green-400' : 'text-red-400';
+            const arrow = change >= 0 ? '📈' : '📉';
+            document.getElementById('priceChange').innerHTML = 
+                '<span class="' + changeColor + '">' + arrow + ' ' + (change >= 0 ? '+' : '') + change.toFixed(2) + ' (' + changePercent.toFixed(2) + '%)</span>';
+
+            document.getElementById('priceDetails').textContent = 
+                '고가: $' + high.toFixed(2) + ' | 저가: $' + low.toFixed(2) + ' | 거래량: ' + volume.toLocaleString();
+        }
+
+        function drawChart(timeSeries) {
+            const canvas = document.getElementById('priceChart');
+            const ctx = canvas.getContext('2d');
+            
+            const parent = canvas.parentElement;
+            canvas.width = parent.clientWidth - 20;
+            canvas.height = parent.clientHeight - 20;
+            
+            const width = canvas.width;
+            const height = canvas.height;
+            
+            const entries = Object.entries(timeSeries).slice(0, 30).reverse();
+            if (entries.length === 0) {
+                console.error('차트 데이터가 없습니다');
+                return;
+            }
+            
+            const prices = entries.map(function(entry) {
+                return parseFloat(entry[1]['4. close']);
+            });
+            const labels = entries.map(function(entry) {
+                return entry[0].substring(5);
+            });
+            
+            console.log('차트 그리기 시작:', prices.length, '개 데이터');
+            
+            ctx.fillStyle = '#1e293b';
+            ctx.fillRect(0, 0, width, height);
+            
+            const minPrice = Math.min.apply(null, prices);
+            const maxPrice = Math.max.apply(null, prices);
+            const priceRange = maxPrice - minPrice || 1;
+            const padding = 50;
+            const chartWidth = width - padding * 2;
+            const chartHeight = height - padding * 2;
+            
+            ctx.strokeStyle = '#374151';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= 5; i++) {
+                const y = padding + chartHeight * i / 5;
+                ctx.beginPath();
+                ctx.moveTo(padding, y);
+                ctx.lineTo(width - padding, y);
+                ctx.stroke();
+                
+                const priceValue = maxPrice - (priceRange * i / 5);
+                ctx.fillStyle = '#9ca3af';
+                ctx.font = '12px sans-serif';
+                ctx.textAlign = 'right';
+                ctx.fillText('$' + priceValue.toFixed(2), padding - 5, y + 4);
+            }
+            
+            ctx.strokeStyle = '#3b82f6';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            
+            for (let i = 0; i < prices.length; i++) {
+                const x = padding + chartWidth * i / (prices.length - 1);
+                const y = padding + chartHeight * (1 - (prices[i] - minPrice) / priceRange);
+                
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            }
+            
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.moveTo(padding + chartWidth * 0 / (prices.length - 1), padding + chartHeight * (1 - (prices[0] - minPrice) / priceRange));
+            for (let i = 1; i < prices.length; i++) {
+                const x = padding + chartWidth * i / (prices.length - 1);
+                const y = padding + chartHeight * (1 - (prices[i] - minPrice) / priceRange);
+                ctx.lineTo(x, y);
+            }
+            const lastX = padding + chartWidth;
+            const lastY = padding + chartHeight * (1 - (prices[prices.length - 1] - minPrice) / priceRange);
+            ctx.lineTo(lastX, height - padding);
+            ctx.lineTo(padding, height - padding);
+            ctx.closePath();
+            ctx.fillStyle = 'rgba(59, 130, 246, 0.15)';
+            ctx.fill();
+            
+            ctx.fillStyle = '#9ca3af';
+            ctx.font = '11px sans-serif';
+            ctx.textAlign = 'center';
+            const labelStep = Math.max(1, Math.floor(labels.length / 8));
+            for (let i = 0; i < labels.length; i++) {
+                if (i % labelStep === 0 || i === labels.length - 1) {
+                    const x = padding + chartWidth * i / (prices.length - 1);
+                    ctx.fillText(labels[i], x, height - 25);
+                }
+            }
+            
+            console.log('✅ 차트 그리기 완료');
+        }
+
+        function analyzeStock() {
+            const priceText = document.getElementById('currentPrice').textContent;
+            const changeText = document.getElementById('priceChange').textContent;
+            
+            if (!priceText || priceText === '$0.00') {
+                showError('먼저 주식 데이터를 불러와주세요');
+                return;
+            }
+
+            const price = parseFloat(priceText.replace('$', ''));
+            const match = changeText.match(/[-+]?\d+\.\d+/);
+            if (!match) return;
+            const changePercent = parseFloat(match[0]);
+
+            let trend, recommendation, confidence, analysis;
+
+            if (changePercent > 2) {
+                trend = 'bullish';
+                recommendation = '매수 고려';
+                confidence = 75;
+                analysis = '강한 상승 추세를 보이고 있습니다. 단기적으로 긍정적인 모멘텀이 있으나, 고점 매수 주의가 필요합니다.';
+            } else if (changePercent > 0.5) {
+                trend = 'bullish';
+                recommendation = '관망 권장';
+                confidence = 65;
+                analysis = '약한 상승세를 보이고 있습니다. 추가 상승 여력을 지켜보는 것이 좋습니다.';
+            } else if (changePercent < -2) {
+                trend = 'bearish';
+                recommendation = '매도 고려';
+                confidence = 70;
+                analysis = '강한 하락 추세입니다. 손실 확대 방지를 위해 매도를 고려해볼 수 있습니다.';
+            } else if (changePercent < -0.5) {
+                trend = 'bearish';
+                recommendation = '관망 권장';
+                confidence = 60;
+                analysis = '약한 하락세를 보이고 있습니다. 반등 가능성을 지켜보는 것이 좋습니다.';
+            } else {
+                trend = 'neutral';
+                recommendation = '관망 권장';
+                confidence = 55;
+                analysis = '횡보 중입니다. 명확한 방향성이 나올 때까지 관망하는 것을 권장합니다.';
+            }
+
+            const trendText = trend === 'bullish' ? '상승세' : trend === 'bearish' ? '하락세' : '횡보';
+            const trendColor = trend === 'bullish' ? 'text-green-400' : trend === 'bearish' ? 'text-red-400' : 'text-yellow-400';
+
+            document.getElementById('analysisBox').innerHTML = 
+                '<div class="space-y-4">' +
+                    '<div class="p-4 bg-slate-700 rounded-lg">' +
+                        '<div class="text-sm text-slate-400 mb-1">추세</div>' +
+                        '<div class="text-2xl font-bold ' + trendColor + '">' + trendText + '</div>' +
+                    '</div>' +
+                    '<div class="p-4 bg-slate-700 rounded-lg">' +
+                        '<div class="text-sm text-slate-400 mb-1">추천</div>' +
+                        '<div class="text-lg font-semibold text-white">' + recommendation + '</div>' +
+                        '<div class="text-sm text-slate-400 mt-1">신뢰도: ' + confidence + '%</div>' +
+                    '</div>' +
+                    '<div class="p-4 bg-slate-700 rounded-lg">' +
+                        '<div class="text-sm text-slate-400 mb-2">분석</div>' +
+                        '<div class="text-sm text-slate-200">' + analysis + '</div>' +
+                    '</div>' +
+                    '<div class="space-y-2">' +
+                        '<div class="text-sm font-semibold text-slate-300 mb-2">주요 지표</div>' +
+                        '<div class="flex justify-between items-center p-2 bg-slate-700 rounded">' +
+                            '<span class="text-sm text-slate-300">가격 추세</span>' +
+                            '<span class="text-sm font-semibold text-blue-400">' + trendText + '</span>' +
+                        '</div>' +
+                        '<div class="flex justify-between items-center p-2 bg-slate-700 rounded">' +
+                            '<span class="text-sm text-slate-300">변동률</span>' +
+                            '<span class="text-sm font-semibold text-blue-400">' + Math.abs(changePercent).toFixed(2) + '%</span>' +
+                        '</div>' +
+                        '<div class="flex justify-between items-center p-2 bg-slate-700 rounded">' +
+                            '<span class="text-sm text-slate-300">추천 행동</span>' +
+                            '<span class="text-sm font-semibold text-blue-400">' + recommendation + '</span>' +
+                        '</div>' +
+                    '</div>' +
+                    '<div class="mt-4 p-3 bg-yellow-900/30 border border-yellow-700/50 rounded-lg">' +
+                        '<p class="text-xs text-yellow-200">' +
+                            '⚠️ 이 분석은 단순 규칙 기반이며 투자 조언이 아닙니다. 실제 투자 결정은 신중히 하세요.' +
+                        '</p>' +
+                    '</div>' +
+                '</div>';
+        }
+
+        function showError(message) {
+            document.getElementById('errorBox').classList.remove('hidden');
+            document.getElementById('errorBox').classList.add('flex');
+            document.getElementById('errorText').textContent = message;
+        }
+
+        function hideError() {
+            document.getElementById('errorBox').classList.add('hidden');
+            document.getElementById('errorBox').classList.remove('flex');
+        }
+    </script>
+</body>
+</html>
